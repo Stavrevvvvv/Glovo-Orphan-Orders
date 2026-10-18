@@ -916,7 +916,14 @@ def _display_action_history(
 			st.download_button("Export filtered resolution history as CSV", resolution_display.to_csv(index=False).encode("utf-8"), file_name="glovo_resolution_history.csv", mime="text/csv")
 
 
-def _display_analytics(queue: pd.DataFrame, actions: pd.DataFrame, enriched: pd.DataFrame) -> None:
+def _display_analytics(
+	queue: pd.DataFrame,
+	actions: pd.DataFrame,
+	enriched: pd.DataFrame,
+	internal_logs: pd.DataFrame | None = None,
+	resolutions: pd.DataFrame | None = None,
+	internal_resolution_logs: pd.DataFrame | None = None,
+) -> None:
 	st.subheader("Analytics")
 	if queue.empty:
 		st.info("Analytics are unavailable until original orders are loaded.")
@@ -1133,7 +1140,7 @@ def main() -> None:
 			st.session_state["selected_order"] = selected_reference
 			_display_review(selected_reference, queue, enriched, database_path, actions, internal_logs, resolutions, internal_resolution_logs)
 	elif section == "Analytics":
-		_display_analytics(queue, actions, enriched)
+		_display_analytics(queue, actions, enriched, internal_logs, resolutions, internal_resolution_logs)
 	else:
 		_display_action_history(actions, queue, resolutions, internal_logs, internal_resolution_logs)
 
