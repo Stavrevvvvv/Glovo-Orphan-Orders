@@ -119,11 +119,11 @@ def test_low_confidence_estimate_requires_review():
 
 
 def test_fragile_item_keeps_recommendation_but_requires_review():
-	row = product(fragile=True)
-	decision = evaluate_order("O-10", [row], original_products_json=original(("item", 1)))
+	row = product(name="Glass vase", fragile=True)
+	decision = evaluate_order("O-10", [row], original_products_json=original(("Glass vase", 1)))
 	assert decision.recommended_vehicle == "Bicycle"
 	assert decision.requires_human_review
-	assert any("special handling" in reason for reason in decision.review_reasons)
+	assert any("fragile, hazardous" in reason for reason in decision.review_reasons)
 
 
 def test_near_capacity_order_is_flagged():
@@ -221,12 +221,23 @@ def test_high_ai_confidence_can_have_medium_operational_confidence():
 	assert decision.requires_human_review
 
 
-def test_liquid_volume_smaller_than_package_is_flagged():
-	row = product(length=7, width=7, height=20)
+def test_small_liquid_volume_discrepancy_does_not_trigger_human_review():
+	row = product(length=9.8, width=10, height=10)
+	row["extracted_volume_litres"] = 1.0
+	assert liquid_volume_plausibility_warning(row) is None
+	decision = evaluate_order("O-18", [row], original_products_json=original(("item", 1)))
+	assert not decision.requires_human_review
+	assert decision.recommended_vehicle == "Bicycle"
+	assert not any("liquid volume plausibility" in reason for reason in decision.review_reasons)
+
+
+def test_liquid_volume_discrepancy_above_five_percent_requires_review():
+	row = product(length=9.4, width=10, height=10)
 	row["extracted_volume_litres"] = 1.0
 	assert liquid_volume_plausibility_warning(row)
-	decision = evaluate_order("O-18", [row], original_products_json=original(("item", 1)))
+	decision = evaluate_order("O-18b", [row], original_products_json=original(("item", 1)))
 	assert decision.requires_human_review
+	assert decision.recommended_vehicle is None
 	assert any("liquid volume plausibility" in reason for reason in decision.review_reasons)
 
 
@@ -237,6 +248,47 @@ def test_liquid_volume_valid_dimensions_have_no_false_positive():
 
 
 def test_fragile_review_reason_is_not_duplicated():
-	decision = evaluate_order("O-19", [product(fragile=True)], original_products_json=original(("item", 1)))
-	assert decision.review_reasons.count("fragile or special handling") == 1
+	rows = [product(name="Glass vase", fragile=True), product(name="Glass vase", fragile=True)]
+	decision = evaluate_order("O-19", rows, original_products_json=original(("Glass vase", 1), ("Glass vase", 1)))
+	assert sum("requires review" in reason for reason in decision.review_reasons) == 1
 	assert not any("one or more products require special handling" == reason for reason in decision.review_reasons)
+
+
+def test_routine_refrigerated_grocery_is_not_escalated_for_cold_chain_alone():
+	row = product(name="Chilled minced beef", confidence="high")
+	row["ai_fragile_or_special_handling"] = True
+	row["ai_normalized_product_description"] = "Chilled minced beef requiring refrigeration and normal cold-chain transport."
+	decision = evaluate_order("O-20", [row], original_products_json=original(("Chilled minced beef", 1)))
+	assert decision.recommended_vehicle is not None
+	assert not decision.requires_human_review
+
+
+def test_generic_ai_manual_review_flag_alone_does_not_escalate():
+	row = product(name="Rice bag", confidence="high")
+	row["ai_manual_review_recommended"] = True
+	row["ai_estimate_explanation"] = "Standard grocery package estimate."
+	decision = evaluate_order("O-23", [row], original_products_json=original(("Rice bag", 1)))
+	assert decision.recommended_vehicle is not None
+	assert not decision.requires_human_review
+
+
+def test_explicit_hazard_and_fragility_still_require_review():
+	row = product(name="Fragile glass aerosol bottle", fragile=True)
+	decision = evaluate_order("O-24", [row], original_products_json=original(("Fragile glass aerosol bottle", 1)))
+	assert decision.requires_human_review
+	assert any("hazardous" in reason for reason in decision.review_reasons)
+
+
+def test_medium_confidence_passes_when_conservative_capacity_and_dimensions_have_margin():
+	row = product(name="Rice bag", weight=2, length=15, width=10, height=8, confidence="medium")
+	decision = evaluate_order("O-21", [row], original_products_json=original(("Rice bag", 1)))
+	assert decision.recommended_vehicle == "Bicycle"
+	assert decision.decision_confidence == "medium"
+	assert not decision.requires_human_review
+
+
+def test_medium_confidence_near_capacity_still_requires_review():
+	row = product(name="Heavy bag", weight=16.0, length=20, width=15, height=10, confidence="medium")
+	decision = evaluate_order("O-22", [row], original_products_json=original(("Heavy bag", 1)))
+	assert decision.recommended_vehicle == "Motorbike"
+	assert decision.requires_human_review

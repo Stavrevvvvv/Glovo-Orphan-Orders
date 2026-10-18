@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 from collections import Counter
 from dataclasses import asdict, dataclass
 from typing import Any, Iterable, Mapping
@@ -30,6 +31,7 @@ DEFAULT_VEHICLES = (
 	VehicleCapacity("Motorbike", 20.0, 70.0, 120.0, 70.0, 70.0, 1.8),
 	VehicleCapacity("Car", 100.0, 500.0, 200.0, 120.0, 100.0, 3.0),
 )
+LIQUID_VOLUME_RELATIVE_TOLERANCE = 0.05
 
 
 @dataclass(frozen=True)
@@ -167,6 +169,44 @@ def _confidence_multiplier(confidence: str, config: DecisionConfig) -> float:
 	return 1.0
 
 
+def _special_handling_reason(row: Mapping[str, Any]) -> str | None:
+	"""Require review for explicit risks, not ordinary refrigerated/perishable handling."""
+	fields = (
+		"product_name", "ai_normalized_product_description", "ai_product_category",
+		"ai_estimate_explanation",
+	)
+	description = " ".join(str(row.get(field) or "") for field in fields).lower()
+	risk_patterns = (
+		r"\bfragile\b", r"\bbreakable\b", r"\bglass\b", r"\beggs?\b", r"\bbruis\w*\b",
+		r"\bleak\w*\b", r"\bspill\w*\b", r"\bcrush\w*\b", r"\bdelicate\b", r"\bceramic\b",
+		r"\bfrozen\b", r"\bfreezer\b", r"\bdry ice\b", r"\bhazard\w*\b", r"\bflammab\w*\b",
+		r"\bexplos\w*\b", r"\bpressur\w*\b", r"\baerosol\b", r"\blithium battery\b",
+		r"\bawkward\b", r"\boversized\b", r"\bdifficult to handle\b", r"\bunusually difficult\b",
+		r"\btemperature[- ]sensitive\b", r"\bdeep[- ]frozen\b", r"\brequires? freezing\b",
+	)
+	if any(re.search(pattern, description) for pattern in risk_patterns):
+		return "fragile, hazardous, frozen, or unusually difficult item requires review"
+	cold_chain_patterns = (r"refrigerat\w*", r"cold[- ]chain", r"perishable", r"chilled", r"keep cold", r"temperature[- ]controlled transport")
+	if _bool(row, "ai_fragile_or_special_handling") and any(re.search(pattern, description) for pattern in cold_chain_patterns):
+		return None
+	if _bool(row, "ai_manual_review_recommended"):
+		uncertainty_terms = ("cannot identify", "cannot be identified", "unknown product", "ambiguous identity", "identity uncertain")
+		if any(term in description for term in uncertainty_terms):
+			return "product identity remains uncertain"
+	return None
+
+
+def _maximum_dimension_utilization(products: Iterable[ProductEstimate], vehicle: VehicleCapacity) -> float:
+	"""Return worst per-item dimension utilization after allowing rotation."""
+	limits = sorted((vehicle.max_item_length_cm, vehicle.max_item_width_cm, vehicle.max_item_height_cm), reverse=True)
+	maximum = 0.0
+	for product in products:
+		if None in (product.length_cm, product.width_cm, product.height_cm):
+			return math.inf
+		maximum = max(maximum, *(dimension / limit for dimension, limit in zip(sorted((product.length_cm, product.width_cm, product.height_cm), reverse=True), limits)))
+	return maximum
+
+
 def calculate_order_weight_breakdown(
 	product_rows: Iterable[Mapping[str, Any]],
 	config: DecisionConfig = DecisionConfig(),
@@ -187,7 +227,7 @@ def calculate_order_weight_breakdown(
 
 
 def liquid_volume_plausibility_warning(row: Mapping[str, Any]) -> str | None:
-	"""Flag dimensions smaller than reliably extracted liquid content volume."""
+	"""Flag materially undersized dimensions relative to reliably extracted liquid volume."""
 	liquid_volume = _number(row, "extracted_volume_litres", positive=True)
 	if liquid_volume is None or _text(row, "extraction_warning"):
 		return None
@@ -197,7 +237,7 @@ def liquid_volume_plausibility_warning(row: Mapping[str, Any]) -> str | None:
 	if None in (length, width, height):
 		return None
 	external_volume = length * width * height / 1000
-	if external_volume < liquid_volume:
+	if liquid_volume > external_volume * (1 + LIQUID_VOLUME_RELATIVE_TOLERANCE):
 		return (
 			f"liquid volume plausibility warning: {liquid_volume:.2f} L content exceeds "
 			f"estimated external packaged volume of {external_volume:.2f} L"
@@ -227,12 +267,11 @@ def product_estimate_from_row(row: Mapping[str, Any], config: DecisionConfig = D
 	if confidence not in {"high", "medium", "low"}:
 		reasons.append("missing or invalid AI confidence")
 		confidence = "low"
-	if confidence != "high":
-		reasons.append(f"{confidence}-confidence physical estimate")
-	if _bool(row, "ai_manual_review_recommended"):
-		reasons.append("AI recommended manual review")
-	if _bool(row, "ai_fragile_or_special_handling"):
-		reasons.append("fragile or special handling")
+	if confidence == "low":
+		reasons.append("low-confidence physical estimate")
+	special_handling_reason = _special_handling_reason(row)
+	if special_handling_reason:
+		reasons.append(special_handling_reason)
 	regex_weight = _number(row, "extracted_weight_kg", positive=True)
 	if weight is not None and regex_weight is not None and weight < regex_weight:
 		reasons.append("AI transport weight is below regex net weight")
@@ -418,7 +457,7 @@ def evaluate_order(
 	all_reasons = list(dict.fromkeys([*completeness_reasons, *(reason for product in products for reason in product.review_reasons)]))
 	blocking_prefixes = (
 		"original products_json", "missing enriched", "enrichment contains", "product does not have",
-		"missing or invalid", "AI transport weight is below",
+		"missing or invalid", "AI transport weight is below", "liquid volume plausibility warning",
 	)
 	blocking_reasons = [reason for reason in all_reasons if reason.startswith(blocking_prefixes)]
 	if blocking_reasons:
@@ -451,6 +490,8 @@ def evaluate_order(
 			all_reasons.append("splitting is required because one courier cannot safely carry the complete order")
 		if max(weight_ratio, volume_ratio) >= config.near_capacity_ratio:
 			all_reasons.append("order is close to assumed capacity limits")
+		if _maximum_dimension_utilization(products, vehicle) >= config.near_capacity_ratio:
+			all_reasons.append("product dimensions are close to assumed item limits")
 		if selected.heuristic_optimal is False:
 			all_reasons.append("a better allocation is known; human review is required")
 		elif selected.heuristic_optimal is None:
@@ -466,7 +507,11 @@ def evaluate_order(
 			for option in options if option.vehicle != selected.vehicle or option.courier_count != selected.courier_count
 		)
 		explanation = f"Selected {selected.vehicle} with {selected.courier_count} courier(s) because it has the lowest hypothetical relative cost among safe options. Alternatives: {alternatives}."
-	confidence = "low" if any(product.confidence == "low" for product in products) else "medium" if all_reasons else "high"
+	confidence = (
+		"low" if any(product.confidence == "low" for product in products)
+		else "medium" if all_reasons or any(product.confidence == "medium" for product in products)
+		else "high"
+	)
 	return DecisionRecord(
 		str(order_reference), total_weight, total_volume,
 		selected.vehicle if selected else None, selected.courier_count if selected else None,
