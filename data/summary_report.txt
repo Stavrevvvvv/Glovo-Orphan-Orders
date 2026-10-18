@@ -1,0 +1,71 @@
+Total orders: 930
+Total product occurrences: 6951
+Percentage with extracted weight: 55.50%
+Percentage with extracted volume: 16.98%
+Percentage with neither: 27.59%
+Percentage of unique product strings with extractable information: 70.82%
+Number of malformed orders: 0
+Orders with at least one product lacking extracted weight and volume: 653
+Percentage of orders with at least one product lacking extracted weight and volume: 70.22%
+Examples of 30 unmatched product names:
+- Toalhitas Cosmia Desmaquilhantes Sensitive Peles Sensíveis 25un
+- Jaja M 10 kom
+- L'empereur 10 Pièces
+- Aromaki Deluxe - 6 Pièces
+- Brochettes Boeuf fromage pannées 2 Pièces
+- Mop rotativ Vileda Turbo cu găleată și storcător
+- Термометр без ртуті медичний скляний PARAMED (Парамед) 1 шт
+- Темпалгін табл. в/о №10(2)
+- Ланч №1
+- Моті Манго Маракуйя
+- Combo For 4
+- კომპაქტი Ww-150 ბავ.სვ. ხელ. ოტომანი 100 ც
+- ბაგი ტილო მიკროფიბრა, იატ/ტილო 50/80 1ც (კლეტკიანი) (დიდი) 2059
+- FINO სამზარეულოს ღრუბელი ფუტკარი 5+1 ც (ფინო)
+- კომპაქტი Ww-151 ბავ. სველ. ხელ ოტომანი 20 ც
+- მიკროფიბრი საწმენდი ტილო 60 x 80
+- ვილედა უნივერსალური ტილო მიკროფიბრა 4ც
+- ბაგის ჩუდო, უნივერსალური მრავალჯერადი ხელსახოცი, ყვითელი, 25x23სმ, 33ც.
+- POL-MAK სასაჩუქრე ჩანთა T2B_OG (პოლმაკი)
+- YORK ტანსაცმლის ჩამოსაკიდი პლასტმასის მოძრავი საკიდით (იორკი)
+- Sano, Detergent capsule Spark pentru mașina de spălat 30 spălări
+- Terea, Bronze
+- Stylo A Bille Pensan My Tech 0.7mm Bleu - 018
+- Pochette Unimax De 10 Stylos Trio 1.0mm - 760
+- Pochette Fluo Schneider De 4 - 006
+- PORTE BLOC SIMPLE ESSENTIAL PURPLE NOIR
+- PAPIER A4 BLANC VRAC
+- BOITE DE 100 TROMBONNE 28MM DL
+- CLASSEUR PP SOUPLE 4 ANNEAUX DOS 20MM VELVET PASTEL
+- RECHARGE CLASSEUR A4 BLANC YAMAMA PATATI
+Examples of potentially ambiguous matches:
+- Кавовий напій Мак Кофе 18 г 3в1 Лісовий горіх
+- Banane minim 1kg maxim 1.3kg
+- Lion Multipak 5x30g 150 g
+- aktiplus Truskawka L.casei + witamina B6 + witamina D (6x100 g) 600 g
+- CITYCAT Clumping Active Carbon, Nisip pentru pisici, fără aromă, 10L/8,5 Kg
+- Głodniaki Paluszki serowe (4 x 20 g) 80 g
+- Piątnica Jogurt naturalny 330g+30g
+- Cafe Au Lait 40G/32G Top Lait Lait
+- Banane eco minim 600g, maxim 900g
+- Onix Сушени фурми без костилка 350гр. 350 ГР / 38945441
+- Dakri Bułki kajzerki 6x50g 300 g
+- Blanquette s/os 450Gr- 500Gr
+- Lido, Înghețată de pepene galben, fără zahăr, 1l (520g)
+- Nirvana, Îngheţată Pralines & Cream 420ml (310g)
+- Banane minim 700g maxim 1kg
+- Podudzie z kurczaka schłodzone, sztuka ok. 150 g, cena za 0,15 kg
+- Tomate Roma Locale 870G-1kg
+- პამპერსი - ბავშვის საფენი ზ-6 /13-18კგ/ #52 4346/8533 Pampers 13-18kg #52 4346/8533
+- მამაკო - თხის რძე /12თვ+/ 800გრ 0514/9152 MAMAKO Goat milk-based milk drink with bifidobacteria for toddlers 800gr
+- ჰუმანა - დესერტი რძ ატმით /6თვ+/ 100გრ #1 701121/4452 Humana - dessert with milk peach /6 months+/ 100g 701121/4452 #1
+- Nuvita Vitamilk Biscuit 400G/375G
+- Knoppers Baton orzechowy (3 x 40 g) 120 g
+- Herbapol Zielnik Polski Herbatka ziołowa rumianek (20 x 1,5 g) 30 g
+- Набір сухого та вологого корму для котів Savory Adult Gourmand 2 кг + 600 г - індичка, качка та риба
+- Salsichas Tipo Alemãs Frasco 5 un sem Glúten Despensa Clássica (emb. 410 gr (peso escorrido 250 gr))
+- Vanilin Šećer Dolc. 6*8 g 5+1 Gr.
+- Prašak Za Pecivo 12 g 5+1 Gr.P
+- Asia Flavours Papryka jalapeño 210 g/110 g
+- Dano Cool Cow Instant Milk Powder 380G/360G Sachet
+- K-STOISKO MIĘSNE Filet z kurczaka waga 0,4 kg - 0,9 kg 1 kg
